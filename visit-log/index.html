@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>業務拜訪紀錄</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 版面概念:三排由上到下的紀錄表單(基本資料 → 本年過往意見 → 本次回饋),下方為歷史清單。牛皮紙棕作為包材業的識別色。 */
+:root {
+  --bg: #f2f3f0;
+  --surface: #ffffff;
+  --fg: #1d2927;
+  --muted: #66716e;
+  --line: #d9ddd8;
+  --accent: #8f5f2e;
+  --accent-fg: #ffffff;
+  --accent-soft: #f1e6d6;
+  --danger: #b3382c;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161b1a; --surface: #1f2625; --fg: #e8ece9; --muted: #9aa5a1; --line: #323b39;
+    --accent: #d09a5c; --accent-fg: #1a1209; --accent-soft: #33291d; --danger: #ef7d70;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161b1a; --surface: #1f2625; --fg: #e8ece9; --muted: #9aa5a1; --line: #323b39;
+  --accent: #d09a5c; --accent-fg: #1a1209; --accent-soft: #33291d; --danger: #ef7d70;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { color-scheme: light; }
+body { margin: 0; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.6;
+  padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+h1 { font-size: 22px; margin: 0; letter-spacing: .04em; }
+.stat { font-size: 13px; color: var(--muted); font-family: var(--font-mono); }
+.notice { background: var(--accent-soft); color: var(--fg); border-radius: 6px; padding: 8px 12px; font-size: 13px; display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; }
+.row { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.row-title { margin: 0; font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: .12em; }
+.grid3 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 560px) { .grid3 { grid-template-columns: 1fr; } }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); min-width: 0; }
+input, select, textarea {
+  font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px;
+  padding: 9px 10px; width: 100%; min-width: 0;
+}
+textarea { min-height: 150px; resize: vertical; line-height: 1.7; }
+textarea.short { min-height: 84px; }
+.focus-line { font-size: 14px; border-left: 3px solid var(--accent); padding-left: 10px; white-space: pre-wrap; }
+.focus-line b { color: var(--accent); font-size: 12px; letter-spacing: .1em; display: block; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
+.place-wrap { display: flex; flex-direction: column; gap: 6px; }
+.prior-empty { color: var(--muted); font-size: 14px; padding: 6px 0; }
+.prior-head { display: flex; gap: 10px 20px; flex-wrap: wrap; align-items: baseline; }
+.prior-head .k { font-size: 13px; color: var(--muted); }
+.prior-head .v { font-family: var(--font-mono); font-size: 15px; font-weight: 500; }
+.prior-body { white-space: pre-wrap; background: var(--accent-soft); border-radius: 6px; padding: 12px; font-size: 14px; max-height: 260px; overflow: auto; }
+details.earlier { font-size: 14px; }
+details.earlier summary { cursor: pointer; color: var(--accent); font-size: 13px; }
+.earlier-item { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px; }
+.earlier-item .t { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+.earlier-item .b { white-space: pre-wrap; }
+.actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+button { font: inherit; cursor: pointer; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); padding: 9px 16px; }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 700; }
+button.small { padding: 4px 10px; font-size: 13px; }
+button.danger { color: var(--danger); border-color: var(--danger); }
+.toast { color: var(--accent); font-size: 14px; min-height: 1.4em; }
+.err { color: var(--danger); font-size: 14px; min-height: 1.4em; }
+.history h2 { margin: 0; font-size: 16px; }
+.history-bar { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; }
+.history-bar select { max-width: 280px; }
+.rec { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.rec-top { display: flex; gap: 6px 14px; flex-wrap: wrap; align-items: baseline; }
+.rec-vendor { font-weight: 700; }
+.rec-meta { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+.tag { font-size: 12px; background: var(--accent-soft); color: var(--accent); border-radius: 4px; padding: 1px 6px; }
+.rec-body { white-space: pre-wrap; font-size: 14px; }
+.rec-actions { display: flex; gap: 8px; }
+details.import > summary { cursor: pointer; list-style: none; }
+details.import > summary::-webkit-details-marker { display: none; }
+details.import > summary::after { content: "  展開 ▾"; color: var(--muted); font-weight: 400; letter-spacing: 0; }
+details.import[open] > summary::after { content: "  收合 ▴"; }
+details.import[open] { gap: 12px; }
+.imp-opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 560px) { .imp-opts { grid-template-columns: 1fr; } }
+.help { font-size: 13px; color: var(--muted); margin: 0; }
+.prev-item { border-top: 1px solid var(--line); padding-top: 8px; font-size: 14px; }
+.prev-item .v { font-weight: 700; }
+.prev-item .m { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.prev-item pre { margin: 4px 0 0; white-space: pre-wrap; font: inherit; font-size: 13px; color: var(--muted); }
+.prev-summary { font-weight: 700; }
+@media (prefers-reduced-motion: no-preference) { button { transition: background .15s, color .15s; } }
+</style>
+</head>
+<body>
+
+<main>
+  <header>
+    <h1>業務拜訪紀錄</h1>
+    <span class="stat"><span id="stat"></span>　<span id="syncState">未連線</span></span>
+  </header>
+
+  <details class="row import" id="sync">
+    <summary class="row-title">同步設定(GitHub)</summary>
+    <p class="help">資料會存到你的私人 repo，手機和電腦資料互通。每台裝置第一次使用都要貼一次存取權杖（只存在該裝置的瀏覽器，不會寫進網頁程式碼）。請勿在公用電腦輸入。</p>
+    <div class="imp-opts">
+      <label for="syncOwner">GitHub 帳號
+        <input type="text" id="syncOwner" autocomplete="off">
+      </label>
+      <label for="syncRepo">資料 repo（私人）
+        <input type="text" id="syncRepo" autocomplete="off">
+      </label>
+    </div>
+    <label for="syncToken">存取權杖（Fine-grained token）
+      <input type="password" id="syncToken" autocomplete="off" placeholder="github_pat_…">
+    </label>
+    <div class="actions">
+      <button type="button" class="primary" id="syncSave">儲存並連線</button>
+      <button type="button" id="syncReload">重新載入</button>
+      <button type="button" id="syncOff">中斷連線</button>
+    </div>
+    <p class="help" id="syncMsg" role="status"></p>
+  </details>
+
+  <div class="notice" id="sampleNotice" hidden>
+    <span>目前有範例資料(來自你貼的拜訪整理),可用來試看「本年過往意見」的效果。</span>
+    <button class="small" id="clearSamples" type="button">刪除範例資料</button>
+  </div>
+
+  <form id="form" autocomplete="off">
+    <section class="row" aria-labelledby="r1">
+      <h2 class="row-title" id="r1">第一排　時間／地點／廠商</h2>
+      <div class="grid3">
+        <label for="time">拜訪時間
+          <input type="datetime-local" id="time">
+        </label>
+        <div class="place-wrap">
+          <label for="placeSel">地點
+            <select id="placeSel">
+              <option>台北</option>
+              <option>台中</option>
+              <option>高雄</option>
+              <option value="__other">自行輸入…</option>
+            </select>
+          </label>
+          <input type="text" id="placeOther" placeholder="輸入地點,例如:桃園、新竹" hidden aria-label="自行輸入地點">
+        </div>
+        <label for="vendor">廠商名稱
+          <input type="text" id="vendor" list="vendorList" placeholder="輸入或選擇廠商名稱">
+          <datalist id="vendorList"></datalist>
+        </label>
+        <label for="phone">廠商電話
+          <input type="tel" id="phone" inputmode="tel" placeholder="例如:03-1234567 或 0912-345-678">
+        </label>
+      </div>
+    </section>
+
+    <section class="row" aria-labelledby="r2" style="margin-top:14px">
+      <h2 class="row-title" id="r2">第二排　拜訪重點</h2>
+      <label for="focus">這次拜訪要達成的重點
+        <textarea id="focus" class="short" placeholder="例如:提前布局明年中秋、安排二訪、維繫關係"></textarea>
+      </label>
+    </section>
+
+    <section class="row" aria-labelledby="r3" style="margin-top:14px">
+      <h2 class="row-title" id="r3">第三排　本年拜訪廠商意見</h2>
+      <div id="prior"></div>
+    </section>
+
+    <section class="row" aria-labelledby="r4" style="margin-top:14px">
+      <h2 class="row-title" id="r4">第四排　本次廠商回饋</h2>
+      <label for="feedback">請輸入這次拜訪聽到的意見、觀察與下一步
+        <textarea id="feedback" placeholder="例如:&#10;* 目前主要採購紙袋、OPP&#10;* 老闆娘態度熱情&#10;* 下一步:安排再次拜訪"></textarea>
+      </label>
+    </section>
+
+    <section class="row" aria-labelledby="r5" style="margin-top:14px">
+      <h2 class="row-title" id="r5">第五排　公司後續作為</h2>
+      <label for="followup">針對這次回饋,公司接下來要做的事
+        <textarea id="followup" placeholder="例如:&#10;* 下週寄送中秋禮盒樣品與目錄&#10;* 11月底前安排二訪&#10;* 報價單待主管確認後回覆"></textarea>
+      </label>
+      <div class="actions">
+        <button type="submit" class="primary">儲存這次拜訪</button>
+        <span class="toast" id="toast" role="status"></span>
+        <span class="err" id="err" role="alert"></span>
+      </div>
+    </section>
+  </form>
+
+  <section class="row history" aria-labelledby="hh">
+    <div class="history-bar">
+      <h2 id="hh">拜訪歷史</h2>
+      <select id="q" aria-label="選擇廠商"><option value="">請選擇廠商</option></select>
+    </div>
+    <div id="list"></div>
+  </section>
+
+  <details class="row import" id="import">
+    <summary class="row-title">匯入過去資料</summary>
+    <p class="help">把過去的拜訪紀錄文字直接貼在下面。格式例如:第一行「9/29 客戶拜訪紀錄」、每間廠商以「1 廠商名稱」開頭、內容用 * 条列、最後可有「這次拜訪的重點」。也支持貼上本頁匯出的 JSON。一次可貼多個日期。</p>
+    <label for="impText">貼上資料
+      <textarea id="impText" placeholder="9/29 客戶拜訪紀錄&#10;&#10;1 全國－楊梅店｜7月開幕&#10;* 目前主要由大有總店統一訂貨。&#10;* 建議:明年中秋可提前接觸。"></textarea>
+    </label>
+    <div class="imp-opts">
+      <label for="impYear">年份(資料只寫 9/29 時使用)
+        <input type="number" id="impYear" min="2000" max="2100">
+      </label>
+      <label for="impPlace">地點(選填,套用到這次匯入的所有紀錄)
+        <input type="text" id="impPlace" placeholder="例如:桃園">
+      </label>
+    </div>
+    <div class="actions">
+      <button type="button" id="impParse">解析預覽</button>
+      <button type="button" class="primary" id="impGo" hidden>確認匯入</button>
+      <span class="err" id="impErr" role="alert"></span>
+    </div>
+    <div id="impPreview"></div>
+  </details>
+</main>
+
+<script>
+(function () {
+  var KEY = "visit-log-v1";
+  var $ = function (id) { return document.getElementById(id); };
+  var records = [];
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) { var a = JSON.parse(raw); if (Array.isArray(a)) return a; }
+    } catch (e) {}
+    return null;
+  }
+  function saveLocal() { try { localStorage.setItem(KEY, JSON.stringify(records)); } catch (e) {} }
+  function save() { saveLocal(); scheduleSync(); }
+
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function nowLocal() {
+    var d = new Date();
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+  function fmt(t) { return t ? t.replace(/T00:00$/, "").replace("T", " ") : "未填時間"; }
+  function yearOf(t) { return (t || "").slice(0, 4); }
+  function norm(s) { return (s || "").trim().toLowerCase(); }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function byTimeDesc(a, b) { return (b.time || "").localeCompare(a.time || ""); }
+
+  /* 範例資料:取自使用者貼上的拜訪整理,時間為示意,標記 sample 方便一鍵刪除 */
+  function samples() {
+    return [
+      { id: "s1", sample: true, time: "2026-06-10T10:00", place: "", vendor: "樂烘小站",
+        feedback: "* 約4年前開幕時曾拜訪,老闆娘對我們仍有印象。\n* 目前店況維持現狀,老闆娘感受到整體市場持續萎縮。\n* 現階段以維繫老客戶關係、穩定既有銷售為主。\n* 建議:維持關係,適時提供適合的小量新品/高性價比包材。" },
+      { id: "s2", sample: true, time: "2026-06-10T14:00", place: "", vendor: "東大",
+        feedback: "* 長期主要訂購紙袋,約一年一次,單次約 5,000~8,000元。\n* 整棟以塑膠製品相關事業為主,現場辦公室也忙於包裝、出貨,生意狀況不錯。\n* 自有塑料製品生產,以台製產品為主。\n* 觀察:屬穩定但低頻客戶,可持續維持關係,尋找其他包材切入機會。" },
+      { id: "s3", sample: true, time: "2026-06-11T11:00", place: "", vendor: "手作工坊|中原商圈",
+        feedback: "* 位於中原商圈夜市,主要經營手作DIY、教學及文具禮品,商品種類非常豐富。\n* 目前主要向我們採購紙袋、OPP、PP。\n* 當天未遇到老闆娘,後續已聯繫上,老闆娘態度熱情,並邀約下次拜訪。\n* 下一步:安排再次拜訪,進一步了解店內需求及可增加的包材品項。" }
+    ];
+  }
+
+  function currentPlace() {
+    return $("placeSel").value === "__other" ? $("placeOther").value.trim() : $("placeSel").value;
+  }
+
+  function renderVendors() {
+    var seen = {}, html = "";
+    records.slice().sort(byTimeDesc).forEach(function (r) {
+      var k = norm(r.vendor);
+      if (k && !seen[k]) { seen[k] = 1; html += '<option value="' + esc(r.vendor) + '">'; }
+    });
+    $("vendorList").innerHTML = html;
+    var cnt = {}, names = {};
+    records.forEach(function (r) { var k = norm(r.vendor); if (k) { cnt[k] = (cnt[k] || 0) + 1; names[k] = names[k] || r.vendor; } });
+    var cur = $("q").value, opts = '<option value="">請選擇廠商</option>';
+    Object.keys(cnt).sort(function (a, b) { return names[a].localeCompare(names[b], "zh-Hant"); }).forEach(function (k) {
+      opts += '<option value="' + esc(k) + '">' + esc(names[k]) + '(' + cnt[k] + ' 筆)</option>';
+    });
+    $("q").innerHTML = opts;
+    $("q").value = cnt[cur] ? cur : "";
+  }
+
+  function renderPrior() {
+    var v = norm($("vendor").value), yr = yearOf($("time").value) || String(new Date().getFullYear());
+    var box = $("prior");
+    if (!v) { box.innerHTML = '<div class="prior-empty">輸入廠商後,這裡會顯示該廠商本年(' + yr + ')的上次拜訪時間與回饋內容。</div>'; return; }
+    var hits = records.filter(function (r) { return norm(r.vendor) === v && yearOf(r.time) === yr; }).sort(byTimeDesc);
+    if (!hits.length) { box.innerHTML = '<div class="prior-empty">' + yr + ' 年尚無「' + esc($("vendor").value.trim()) + '」的拜訪紀錄,這是第一次拜訪。</div>'; return; }
+    var last = hits[0];
+    var html = '<div class="prior-head"><span><span class="k">上次拜訪時間　</span><span class="v">' + esc(fmt(last.time)) + '</span></span>' +
+      (last.place ? '<span><span class="k">地點　</span><span class="v">' + esc(last.place) + '</span></span>' : '') +
+      (last.phone ? '<span><span class="k">電話　</span><span class="v">' + esc(last.phone) + '</span></span>' : '') +
+      '<span><span class="k">本年已拜訪　</span><span class="v">' + hits.length + ' 次</span></span></div>' +
+      (last.focus ? '<div class="focus-line"><b>上次拜訪重點</b>' + esc(last.focus) + '</div>' : '') +
+      '<div class="prior-body">' + esc(last.feedback) + '</div>' +
+      (last.followup ? '<div class="focus-line"><b>上次公司後續作為</b>' + esc(last.followup) + '</div>' : '');
+    if (hits.length > 1) {
+      html += '<details class="earlier"><summary>查看本年更早的 ' + (hits.length - 1) + ' 筆回饋</summary>';
+      hits.slice(1).forEach(function (r) {
+        html += '<div class="earlier-item"><div class="t">' + esc(fmt(r.time)) + (r.place ? "　" + esc(r.place) : "") + '</div><div class="b">' + esc(r.feedback) + '</div></div>';
+      });
+      html += '</details>';
+    }
+    box.innerHTML = html;
+  }
+
+  var pendingDelete = null, editingId = null;
+  function editForm(r) {
+    return '<article class="rec"><div class="imp-opts">' +
+      '<label for="ed-time">拜訪時間<input type="datetime-local" id="ed-time" value="' + esc(r.time || "") + '"></label>' +
+      '<label for="ed-place">地點<input type="text" id="ed-place" value="' + esc(r.place || "") + '"></label>' +
+      '<label for="ed-vendor">廠商名稱<input type="text" id="ed-vendor" value="' + esc(r.vendor) + '"></label>' +
+      '<label for="ed-phone">廠商電話<input type="tel" id="ed-phone" value="' + esc(r.phone || "") + '"></label></div>' +
+      '<label for="ed-focus">拜訪重點<textarea id="ed-focus" class="short">' + esc(r.focus || "") + '</textarea></label>' +
+      '<label for="ed-feedback">廠商回饋<textarea id="ed-feedback">' + esc(r.feedback) + '</textarea></label>' +
+      '<label for="ed-followup">公司後續作為<textarea id="ed-followup" class="short">' + esc(r.followup || "") + '</textarea></label>' +
+      '<div class="actions"><button class="small primary" data-save="' + r.id + '" type="button">儲存修改</button><button class="small" data-ecancel="1" type="button">取消</button><span class="err" id="ed-err" role="alert"></span></div></article>';
+  }
+  function renderList() {
+    var q = norm($("q").value);
+    var rows = q ? records.filter(function (r) { return norm(r.vendor) === q; }).sort(byTimeDesc) : [];
+    var list = $("list");
+    if (!rows.length) { list.innerHTML = '<div class="prior-empty">' + (records.length ? "請從右上角的下拉選單選擇廠商,查看該廠商的拜訪紀錄。" : "還沒有拜訪紀錄,填完上方表單後按「儲存這次拜訪」。") + '</div>'; }
+    else {
+      list.innerHTML = rows.map(function (r) {
+        if (editingId === r.id) return editForm(r);
+        var del = pendingDelete === r.id
+          ? '<button class="small danger" data-del="' + r.id + '" type="button">確定刪除</button><button class="small" data-cancel="1" type="button">取消</button>'
+          : '<button class="small" data-edit="' + r.id + '" type="button">修改</button><button class="small" data-fill="' + r.id + '" type="button">帶入廠商</button><button class="small" data-del="' + r.id + '" type="button">刪除</button>';
+        return '<article class="rec"><div class="rec-top"><span class="rec-vendor">' + esc(r.vendor) + '</span>' +
+          (r.sample ? '<span class="tag">範例</span>' : '') +
+          '<span class="rec-meta">' + esc(fmt(r.time)) + (r.place ? "　" + esc(r.place) : "") + (r.phone ? "　" + esc(r.phone) : "") + '</span></div>' +
+          (r.focus ? '<div class="focus-line"><b>拜訪重點</b>' + esc(r.focus) + '</div>' : '') +
+          '<div class="rec-body">' + esc(r.feedback) + '</div>' +
+          (r.followup ? '<div class="focus-line"><b>公司後續作為</b>' + esc(r.followup) + '</div>' : '') +
+          '<div class="rec-actions">' + del + '</div></article>';
+      }).join("");
+    }
+    var yr = String(new Date().getFullYear());
+    var thisYear = records.filter(function (r) { return yearOf(r.time) === yr; }).length;
+    $("stat").textContent = yr + " 年 " + thisYear + " 筆 / 共 " + records.length + " 筆";
+    $("sampleNotice").hidden = !records.some(function (r) { return r.sample; });
+  }
+
+  function renderAll() { renderVendors(); renderPrior(); renderList(); }
+
+  $("placeSel").addEventListener("change", function () {
+    var other = $("placeSel").value === "__other";
+    $("placeOther").hidden = !other;
+    if (other) $("placeOther").focus();
+  });
+  var phoneAuto = true; /* 電話未被手動修改時,依廠商自動帶入最近一次填寫的電話 */
+  function syncPhone() {
+    if (!phoneAuto && $("phone").value.trim()) return;
+    var v = norm($("vendor").value);
+    var hit = records.filter(function (r) { return norm(r.vendor) === v && r.phone; }).sort(byTimeDesc)[0];
+    $("phone").value = hit ? hit.phone : "";
+    phoneAuto = true;
+  }
+  function onVendor() { syncPhone(); renderPrior(); }
+  $("phone").addEventListener("input", function () { phoneAuto = false; });
+  $("vendor").addEventListener("input", onVendor);
+  $("vendor").addEventListener("change", onVendor);
+  $("time").addEventListener("change", renderPrior);
+  $("q").addEventListener("change", function () { editingId = null; pendingDelete = null; renderList(); });
+
+  $("form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    $("toast").textContent = ""; $("err").textContent = "";
+    var vendor = $("vendor").value.trim(), fb = $("feedback").value.trim(), place = currentPlace();
+    if (!vendor) { $("err").textContent = "請先輸入廠商名稱。"; $("vendor").focus(); return; }
+    if (!$("time").value) { $("err").textContent = "請選擇拜訪時間。"; $("time").focus(); return; }
+    if (!place) { $("err").textContent = "請輸入地點。"; $("placeOther").focus(); return; }
+    if (!fb) { $("err").textContent = "請輸入本次廠商回饋。"; $("feedback").focus(); return; }
+    records.push({ id: "r" + Date.now(), time: $("time").value, place: place, vendor: vendor, phone: $("phone").value.trim(), focus: $("focus").value.trim(), followup: $("followup").value.trim(), feedback: fb });
+    save();
+    $("feedback").value = "";
+    $("focus").value = "";
+    $("followup").value = "";
+    $("toast").textContent = "已儲存「" + vendor + "」的拜訪紀錄。";
+    renderAll();
+    $("q").value = norm(vendor); renderList();
+  });
+
+  $("list").addEventListener("click", function (e) {
+    var t = e.target;
+    if (t.getAttribute("data-edit")) {
+      editingId = t.getAttribute("data-edit"); pendingDelete = null; renderList();
+      var ev = $("ed-vendor"); if (ev) ev.focus();
+    } else if (t.getAttribute("data-ecancel")) {
+      editingId = null; renderList();
+    } else if (t.getAttribute("data-save")) {
+      var rec = records.filter(function (x) { return x.id === t.getAttribute("data-save"); })[0];
+      var nv = $("ed-vendor").value.trim(), nf = $("ed-feedback").value.trim();
+      if (!nv) { $("ed-err").textContent = "請輸入廠商名稱。"; return; }
+      if (!$("ed-time").value) { $("ed-err").textContent = "請選擇拜訪時間。"; return; }
+      if (!nf) { $("ed-err").textContent = "請輸入廠商回饋。"; return; }
+      if (rec) {
+        rec.time = $("ed-time").value; rec.place = $("ed-place").value.trim(); rec.vendor = nv;
+        rec.phone = $("ed-phone").value.trim(); rec.focus = $("ed-focus").value.trim(); rec.followup = $("ed-followup").value.trim(); rec.feedback = nf;
+        delete rec.sample;
+        save();
+      }
+      editingId = null; renderAll();
+    } else if (t.getAttribute("data-fill")) {
+      var r = records.filter(function (x) { return x.id === t.getAttribute("data-fill"); })[0];
+      if (r) { $("vendor").value = r.vendor; phoneAuto = true; $("phone").value = ""; onVendor(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+    } else if (t.getAttribute("data-del")) {
+      var id = t.getAttribute("data-del");
+      if (pendingDelete === id) { records = records.filter(function (x) { return x.id !== id; }); pendingDelete = null; save(); renderAll(); }
+      else { pendingDelete = id; renderList(); }
+    } else if (t.getAttribute("data-cancel")) { pendingDelete = null; renderList(); }
+  });
+
+  $("clearSamples").addEventListener("click", function () {
+    records = records.filter(function (r) { return !r.sample; });
+    save(); renderAll();
+  });
+
+  /* ---- 匯入過去資料 ---- */
+  var pending = [];
+  var numRe = /^\s*(?:[0-9#*]️?⃣|[①-⑳]|\d{1,2}(?=[.、)\s]))\s*[.、)]?\s*(.*)$/;
+  var bulletRe = /^\s*[*•・\-－·]\s*/;
+  function isoDate(y, m, d) { return y + "-" + pad(+m) + "-" + pad(+d) + "T00:00"; }
+
+  function parseText(text, year, place) {
+    var lines = text.replace(/\r/g, "").split("\n");
+    var sessions = [], cur = null, blk = null, inFocus = false;
+    lines.forEach(function (raw) {
+      var s = raw.trim();
+      if (!s) return;
+      var dm = s.match(/^(\d{1,2})\/(\d{1,2})(?!\d)/);
+      if (dm) { cur = { date: isoDate(year, dm[1], dm[2]), blocks: [], focusText: "" }; sessions.push(cur); blk = null; inFocus = false; return; }
+      if (!cur) { cur = { date: nowLocal().slice(0, 10) + "T00:00", blocks: [], focusText: "" }; sessions.push(cur); }
+      if (s.indexOf("📌") === 0 || (/拜訪.{0,2}重點/.test(s) && s.length < 16 && !bulletRe.test(s))) { inFocus = true; blk = null; return; }
+      if (inFocus) { cur.focusText += s + "\n"; return; }
+      if (bulletRe.test(s)) { if (blk) blk.lines.push("* " + s.replace(bulletRe, "")); return; }
+      var nm = s.match(numRe);
+      if (nm && nm[1].trim()) { blk = { vendor: nm[1].trim(), lines: [], focus: "" }; cur.blocks.push(blk); return; }
+      if (blk) { blk.lines.push(s); return; }
+      blk = { vendor: s, lines: [], focus: "" }; cur.blocks.push(blk);
+    });
+    var out = [];
+    sessions.forEach(function (se) {
+      se.focusText.split(/[;；\n]/).forEach(function (seg) {
+        var m = seg.match(/^\s*(.+?)(?:是|則以|以)[「"“](.+?)[」"”]/);
+        if (!m) return;
+        se.blocks.forEach(function (b) {
+          var core = b.vendor.split(/[－\-｜|]/)[0].trim();
+          if (!b.focus && (b.vendor.indexOf(m[1].trim()) === 0 || m[1].trim().indexOf(core) === 0)) b.focus = m[2];
+        });
+      });
+      se.blocks.forEach(function (b) {
+        if (!b.vendor || !b.lines.length) return;
+        out.push({ id: "i" + Date.now() + "_" + out.length, time: se.date, place: place, vendor: b.vendor, phone: "", focus: b.focus, feedback: b.lines.join("\n") });
+      });
+    });
+    return out;
+  }
+
+  function parseJson(text) {
+    var a = JSON.parse(text);
+    if (!Array.isArray(a)) throw new Error("not array");
+    return a.filter(function (r) { return r && r.vendor && r.feedback; }).map(function (r, i) {
+      return { id: "j" + Date.now() + "_" + i, time: r.time || "", place: r.place || "", vendor: String(r.vendor), phone: r.phone || "", focus: r.focus || "", followup: r.followup || "", feedback: String(r.feedback) };
+    });
+  }
+
+  function isDup(r) {
+    return records.some(function (x) { return norm(x.vendor) === norm(r.vendor) && x.time === r.time && norm(x.feedback) === norm(r.feedback); });
+  }
+
+  $("impParse").addEventListener("click", function () {
+    $("impErr").textContent = ""; $("impGo").hidden = true; pending = [];
+    var text = $("impText").value.trim();
+    if (!text) { $("impErr").textContent = "請先貼上資料。"; $("impPreview").innerHTML = ""; return; }
+    var found;
+    try {
+      found = text.charAt(0) === "[" ? parseJson(text) : parseText(text, $("impYear").value || new Date().getFullYear(), $("impPlace").value.trim());
+    } catch (e) { $("impErr").textContent = "無法解析,請確認 JSON 格式正確。"; return; }
+    if (!found.length) { $("impErr").textContent = "沒有解析到資料,請確認每間廠商以「1 廠商名稱」開頭、內容以 * 開頭。"; $("impPreview").innerHTML = ""; return; }
+    var fresh = found.filter(function (r) { return !isDup(r); });
+    pending = fresh;
+    var html = '<div class="prev-summary">解析到 ' + found.length + ' 筆,將匯入 ' + fresh.length + ' 筆' + (found.length > fresh.length ? ',略過重複 ' + (found.length - fresh.length) + ' 筆' : '') + '</div>';
+    fresh.forEach(function (r) {
+      html += '<div class="prev-item"><span class="v">' + esc(r.vendor) + '</span> <span class="m">' + esc(fmt(r.time)) + (r.place ? "　" + esc(r.place) : "") + '</span>' +
+        (r.focus ? '<div class="focus-line"><b>拜訪重點</b>' + esc(r.focus) + '</div>' : '') +
+        '<pre>' + esc(r.feedback) + '</pre></div>';
+    });
+    $("impPreview").innerHTML = html;
+    $("impGo").hidden = !fresh.length;
+  });
+
+  $("impGo").addEventListener("click", function () {
+    if (!pending.length) return;
+    var n = pending.length, hadSample = records.some(function (r) { return r.sample; });
+    if (hadSample) records = records.filter(function (r) { return !r.sample; });
+    records = records.concat(pending);
+    pending = [];
+    save();
+    $("impText").value = ""; $("impGo").hidden = true;
+    $("impPreview").innerHTML = '<div class="prev-summary">已匯入 ' + n + ' 筆' + (hadSample ? ',並移除範例資料' : '') + '。</div>';
+    renderAll();
+  });
+  $("impYear").value = new Date().getFullYear();
+
+  /* ---- GitHub 同步:資料存在私人 repo 的 visits.json ---- */
+  var CFG_KEY = "visit-log-sync";
+  var cfg = { owner: "alexanderliao1010", repo: "visit-data", path: "visits.json", token: "", merged: false };
+  try { var c0 = JSON.parse(localStorage.getItem(CFG_KEY) || "null"); if (c0) { for (var k0 in c0) cfg[k0] = c0[k0]; } } catch (e) {}
+  function saveCfg() { try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch (e) {} }
+  var sha = null, syncTimer = null, syncBusy = false, syncAgain = false;
+
+  function setState(text, bad) {
+    $("syncState").textContent = text;
+    $("syncState").style.color = bad ? "var(--danger)" : "";
+    $("syncMsg").textContent = text;
+  }
+  function errText(e) {
+    var c = e && e.message;
+    if (c === "401") return "存取權杖不正確或已過期";
+    if (c === "403" || c === "404") return "找不到 repo 或權杖沒有權限(請確認權杖授權給資料 repo，且 Contents 為讀寫)";
+    return "連線失敗,請檢查網路後按「重新載入」";
+  }
+  function api(method, body) {
+    var url = "https://api.github.com/repos/" + encodeURIComponent(cfg.owner) + "/" + encodeURIComponent(cfg.repo) + "/contents/" + cfg.path;
+    var headers = { "Accept": "application/vnd.github+json", "Authorization": "Bearer " + cfg.token };
+    if (body) headers["Content-Type"] = "application/json";
+    return fetch(url + (method === "GET" ? "?t=" + Date.now() : ""), { method: method, headers: headers, body: body ? JSON.stringify(body) : undefined, cache: "no-store" });
+  }
+  function enc(str) {
+    var b = new TextEncoder().encode(str), s = "";
+    for (var i = 0; i < b.length; i += 8192) s += String.fromCharCode.apply(null, b.subarray(i, i + 8192));
+    return btoa(s);
+  }
+  function dec(b64) {
+    var s = atob(b64.replace(/\s/g, "")), b = new Uint8Array(s.length);
+    for (var i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
+    return new TextDecoder().decode(b);
+  }
+  function pull() {
+    return api("GET").then(function (res) {
+      if (res.status === 404) { sha = null; return null; }
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json().then(function (j) { sha = j.sha; return JSON.parse(dec(j.content)); });
+    });
+  }
+  function put(retry) {
+    var body = { message: "update visits " + new Date().toISOString(), content: enc(JSON.stringify(records, null, 1)) };
+    if (sha) body.sha = sha;
+    return api("PUT", body).then(function (res) {
+      if ((res.status === 409 || res.status === 422) && retry) return pull().then(function () { return put(false); });
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json().then(function (j) { sha = j.content.sha; });
+    });
+  }
+  function stamp() { var d = new Date(); return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+
+  function scheduleSync() {
+    if (!cfg.token) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(doSync, 700);
+  }
+  function doSync() {
+    if (syncBusy) { syncAgain = true; return; }
+    syncBusy = true; setState("同步中…");
+    put(true).then(function () { setState("已同步 " + stamp()); })
+      .catch(function (e) { setState("同步失敗:" + errText(e), true); })
+      .then(function () { syncBusy = false; if (syncAgain) { syncAgain = false; doSync(); } });
+  }
+
+  function connect() {
+    if (!cfg.token) { setState("未連線(資料只存在此瀏覽器)"); return; }
+    setState("連線中…");
+    pull().then(function (remote) {
+      if (remote === null) { return put(true).then(function () { setState("已連線,已建立 visits.json " + stamp()); }); }
+      var list = Array.isArray(remote) ? remote : [];
+      if (!cfg.merged) {
+        /* 第一次連線:合併本機資料與雲端資料 */
+        var ids = {}; list.forEach(function (r) { ids[r.id] = 1; });
+        var extra = records.filter(function (r) { return !ids[r.id]; });
+        records = list.concat(extra);
+        cfg.merged = true; saveCfg(); saveLocal(); renderAll();
+        if (extra.length) return put(true).then(function () { setState("已連線,已合併 " + extra.length + " 筆本機資料 " + stamp()); });
+        setState("已連線 " + stamp());
+        return;
+      }
+      records = list; saveLocal(); renderAll();
+      setState("已同步 " + stamp());
+    }).catch(function (e) { setState("連線失敗:" + errText(e), true); });
+  }
+  function fillSyncForm() {
+    $("syncOwner").value = cfg.owner; $("syncRepo").value = cfg.repo; $("syncToken").value = cfg.token;
+  }
+  $("syncSave").addEventListener("click", function () {
+    cfg.owner = $("syncOwner").value.trim(); cfg.repo = $("syncRepo").value.trim(); cfg.token = $("syncToken").value.trim();
+    cfg.merged = false; saveCfg(); connect();
+  });
+  $("syncReload").addEventListener("click", connect);
+  $("syncOff").addEventListener("click", function () {
+    cfg.token = ""; cfg.merged = false; saveCfg(); $("syncToken").value = ""; connect();
+  });
+
+  var stored = load();
+  records = stored === null ? [] : stored;
+  $("time").value = nowLocal();
+  renderAll();
+  fillSyncForm();
+  connect();
+})();
+</script>
+</body>
+</html>
